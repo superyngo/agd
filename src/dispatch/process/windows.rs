@@ -1,7 +1,11 @@
 #![allow(dead_code)]
 
-use anyhow::Result;
+use super::ChildState;
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
 
-pub fn dispatch_unix_only() -> Result<std::process::ExitStatus> {
-    anyhow::bail!("dispatch is unix-only in v1")
+pub fn start_signal_watcher(
+    _state: Arc<Mutex<ChildState>>,
+    _shutdown: Arc<AtomicBool>,
+) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(|| {})
 }

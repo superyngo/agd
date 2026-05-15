@@ -94,7 +94,10 @@ pub fn cmd_dispatch(args: &DispatchArgs, config_path: Option<&Path>) -> anyhow::
     // Setup signal watcher (once at start of dispatch)
     let state: Arc<Mutex<ChildState>> = Arc::new(Mutex::new(ChildState::default()));
     let shutdown = Arc::new(AtomicBool::new(false));
+    #[cfg(unix)]
     let _watcher = process::unix::start_signal_watcher(state.clone(), shutdown.clone());
+    #[cfg(windows)]
+    let _watcher = process::windows::start_signal_watcher(state.clone(), shutdown.clone());
 
     let result = if let Some(ref agent_id) = args.agent {
         dispatch_single(&config, &templates, &prompt, agent_id, args, depth, &state)

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.1.1] - 2026-05-15
+
+### Fixed
+- Gate `dispatch::process::unix` / `windows` submodules by target OS so Windows builds no longer fail trying to compile unix-only code (libc `setsid`/`killpg`, `pre_exec`, `signal_hook::iterator`).
+- Add Windows stub for `start_signal_watcher`.
+
 ## [v0.1.0] - 2026-05-15
 
 ### Added
