@@ -13,9 +13,11 @@ Users who download a release must manually locate and place `config/cli-template
 
 Bundle `config/cli-templates.toml` (preserving the `config/` subdirectory) together with the binary in every release archive. Windows gets `.zip`; Linux/macOS keep `.tar.gz`.
 
-## Breaking Change
+## Breaking Changes
 
-**Windows artifact format changes from `.exe` to `.zip`.** Any automation script or CI pipeline that downloads Windows releases by filename pattern (e.g., `*-windows-*.exe`) must be updated to target `.zip` instead. This should be called out explicitly in the release notes for the first release using this new format.
+**Windows:** Artifact format changes from bare `.exe` to `.zip`. Any automation that downloads Windows releases by filename (e.g., `*-windows-*.exe`) must be updated to target `*-windows-*.zip` and extract before use. Note explicitly in release notes.
+
+**Linux/macOS:** The `.tar.gz` archives previously contained only the binary. After this change they also contain `config/`. Any script that extracts a specific file (`tar xzf ... dispatch-agent`) or uses `--strip-components` to handle a top-level directory (there is none, but scripts assuming a single-file archive may behave unexpectedly) may need updating. Note this content change in release notes.
 
 ## Archive Structure (all platforms)
 
@@ -34,19 +36,37 @@ Bundle `config/cli-templates.toml` (preserving the `config/` subdirectory) toget
 
 ### 1. Matrix — Windows `asset_name` cleanup + add `archive_ext`
 
-Remove the `.exe` suffix from `asset_name` for all Windows targets, and add an `archive_ext` field to each matrix entry to avoid inline ternary expressions later:
+Remove the `.exe` suffix from `asset_name` for all Windows targets, and add an `archive_ext` field to **every one of the 13 matrix entries** (10 Linux/macOS + 3 Windows). Section 5's unified upload step uses `matrix.archive_ext`; any entry missing this field will cause that build job to fail.
 
 | Target | `asset_name` (before) | `asset_name` (after) | `archive_ext` |
 |--------|-----------------------|----------------------|---------------|
-| `dispatch-agent-windows-x86_64.exe` | `dispatch-agent-windows-x86_64` | `zip` |
-| `dispatch-agent-windows-i686.exe` | `dispatch-agent-windows-i686` | `zip` |
-| `dispatch-agent-windows-aarch64.exe` | `dispatch-agent-windows-aarch64` | `zip` |
-| All Linux/macOS targets | (unchanged) | `tar.gz` |
+| `x86_64-pc-windows-msvc` | `dispatch-agent-windows-x86_64.exe` | `dispatch-agent-windows-x86_64` | `zip` |
+| `i686-pc-windows-msvc` | `dispatch-agent-windows-i686.exe` | `dispatch-agent-windows-i686` | `zip` |
+| `aarch64-pc-windows-msvc` | `dispatch-agent-windows-aarch64.exe` | `dispatch-agent-windows-aarch64` | `zip` |
+| All 10 Linux/macOS targets | (unchanged) | (unchanged) | `tar.gz` |
 
 `artifact_name` (the actual compiled binary filename) remains `dispatch-agent.exe` for Windows, `dispatch-agent` for others.
 
-### 2. Build Job — Linux/macOS: Modify "Create tarball" step
+### 2. Build Job — Preflight: Verify config file exists
 
+Add early in the build job (before any packaging step) to produce a clear error if the config file is missing, rather than a cryptic `cp: cannot stat` failure:
+
+```yaml
+- name: Verify config file exists
+  run: test -f config/cli-templates.toml
+```
+
+On Windows, add the equivalent:
+
+```yaml
+- name: Verify config file exists (Windows)
+  if: matrix.os == 'windows-latest'
+  shell: pwsh
+  run: |
+    if (-not (Test-Path "config\cli-templates.toml")) { Write-Error "config\cli-templates.toml not found"; exit 1 }
+```
+
+### 3. Build Job — Linux/macOS: Modify "Create tarball" step
 Replace the current single-directory `tar` invocation with a staging-directory approach that merges the binary and the explicit config file:
 
 ```yaml
@@ -62,7 +82,7 @@ Replace the current single-directory `tar` invocation with a staging-directory a
 
 The checkout step already provides `config/cli-templates.toml` at the repo root. `cp` preserves the execute bit from `target/release/`, so `chmod +x` is not needed.
 
-### 3. Build Job — Windows: New "Create zip" step
+### 4. Build Job — Windows: New "Create zip" step
 
 Add a new step after the strip steps (Windows skips stripping anyway) to produce a `.zip`, using explicit file paths (not glob) to prevent unintended files from being included:
 
@@ -80,7 +100,7 @@ Add a new step after the strip steps (Windows skips stripping anyway) to produce
 
 Using explicit `-Path staging\<binary>, staging\config` instead of `staging\*` prevents accidentally bundling hidden files or other workspace artifacts.
 
-### 4. Build Job — Add Archive Verification Steps
+### 5. Build Job — Add Archive Verification Steps
 
 After packaging, verify the archive contains the expected files before uploading. This is the primary automated safeguard against regressions:
 
@@ -88,8 +108,8 @@ After packaging, verify the archive contains the expected files before uploading
 - name: Verify archive contents (Linux and macOS)
   if: matrix.os != 'windows-latest'
   run: |
-    tar tzf ${{ matrix.asset_name }}.tar.gz | grep -q 'config/cli-templates.toml'
-    tar tzf ${{ matrix.asset_name }}.tar.gz | grep -qE '^\.?/?${{ matrix.artifact_name }}$'
+    tar tzf ${{ matrix.asset_name }}.tar.gz | grep -qxF './config/cli-templates.toml'
+    tar tzf ${{ matrix.asset_name }}.tar.gz | grep -qxF './${{ matrix.artifact_name }}'
 
 - name: Verify archive contents (Windows)
   if: matrix.os == 'windows-latest'
@@ -101,7 +121,7 @@ After packaging, verify the archive contains the expected files before uploading
     Remove-Item -Recurse -Force verify_tmp
 ```
 
-### 5. Build Job — Merge Upload Artifacts Steps
+### 6. Build Job — Merge Upload Artifacts Steps
 
 Both platforms now upload a single archive file. The two separate upload steps can be collapsed into one, using `matrix.archive_ext` (defined in Section 1):
 
@@ -113,7 +133,7 @@ Both platforms now upload a single archive file. The two separate upload steps c
     path: ${{ matrix.asset_name }}.${{ matrix.archive_ext }}
 ```
 
-### 6. Release Job — Simplify "Prepare release files" step
+### 7. Release Job — Simplify "Prepare release files" step
 
 All artifacts are now archives. Remove the entire `for dir` loop that handled the Windows `.exe` special case. Only archive files need to be collected:
 
@@ -126,7 +146,7 @@ All artifacts are now archives. Remove the entire `for dir` loop that handled th
     ls -la release_files/
 ```
 
-### 7. Release Job — Update "Display structure" debug step
+### 8. Release Job — Update "Display structure" debug step
 
 The current step searches for `*.exe` in addition to archives. Since no bare `.exe` files will exist post-change, update to only search for archives:
 
@@ -141,11 +161,11 @@ The current step searches for `*.exe` in addition to archives. Since no bare `.e
     find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \)
 ```
 
-### 8. SHA256SUMS Step — No Changes Required
+### 9. SHA256SUMS Step — No Changes Required
 
 The `sha256sum *` command operates on all files present in `release_files/`. Before this change, that included `.tar.gz` files and bare `.exe` files. After this change, it will include `.tar.gz` and `.zip` files. The step logic is unchanged and checksums will correctly cover all artifacts.
 
-### 9. Add `.gitattributes` for LF line endings
+### 10. Add `.gitattributes` for LF line endings
 
 Windows `actions/checkout` may convert LF → CRLF for text files, causing `config/cli-templates.toml` to have different line endings between Windows `.zip` and Linux/macOS `.tar.gz`. This would produce different SHA256 checksums for the same logical file across platforms, and could confuse cross-platform users.
 
@@ -170,7 +190,18 @@ This script likely downloads a `.exe` directly. After this change ships, the Gis
 1. Download `dispatch-agent-windows-<arch>.zip` instead of `.exe`
 2. Extract the archive to the installation directory (preserving `config/` subdirectory)
 
-This update must be coordinated with the first release using the new format. The script is not in this repository and cannot be modified via this workflow change.
+The README command (`irm ... gpinstall.ps1 | iex`) itself does not need to change — only the Gist content. This update must be coordinated with the first release using the new format.
+
+### Update `release.yml` release body template
+
+The release body template (lines 291–306 of `release.yml`) currently has no extraction instructions. Consider adding a brief extraction example to assist users who download manually:
+
+```
+## 📦 Extraction
+
+**Linux/macOS:** `tar xzf dispatch-agent-<platform>.tar.gz -C /usr/local/bin`
+**Windows:** Extract the `.zip` and place both `dispatch-agent.exe` and the `config/` folder in the same directory.
+```
 
 ## Future Config Files
 
@@ -184,7 +215,7 @@ There is no single-point config for "files to bundle" — maintainers must keep 
 
 - Archive naming for Linux/macOS stays unchanged (e.g., `dispatch-agent-linux-x86_64.tar.gz`)
 - All build, cross-compilation, and strip steps remain unchanged
-- The `Generate checksums` step (`sha256sum *`) requires no modification — see Section 8
+- The `Generate checksums` step (`sha256sum *`) requires no modification — see Section 9
 
 ## Verification
 
@@ -206,3 +237,7 @@ There is no single-point config for "files to bundle" — maintainers must keep 
 - `config/cli-templates.toml` uses LF line endings in all archives (enforced by `.gitattributes`)
 - Release notes for the first release using this format include the breaking change notice for Windows artifact format
 - `gpinstall.ps1` Gist updated before or alongside the first release using this format
+
+## Future Considerations (Non-Blocking)
+
+- **Reproducible archives:** `Compress-Archive` embeds the current timestamp in each zip entry; `tar` embeds UID/GID and mtime. Neither affects release functionality. If build reproducibility becomes a requirement, add `--sort=name --mtime='1970-01-01 00:00:00' --owner=0 --group=0 --numeric-owner` to the `tar` command, and replace `Compress-Archive` with a .NET `ZipFile` call using a fixed `DateTimeOffset`.
