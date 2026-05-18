@@ -21,6 +21,19 @@ pub fn load_templates() -> anyhow::Result<IndexMap<String, Template>> {
 }
 
 #[allow(dead_code)]
+fn candidate_from_env(var: &str, suffix: &[&str]) -> Option<std::path::PathBuf> {
+    let base = env::var(var).ok()?;
+    if base.is_empty() {
+        return None;
+    }
+    let mut p = std::path::PathBuf::from(base);
+    for s in suffix {
+        p.push(s);
+    }
+    Some(p)
+}
+
+#[allow(dead_code)]
 fn find_first_existing(candidates: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
     candidates.iter().find(|p| p.exists()).cloned()
 }
@@ -145,6 +158,32 @@ mod tests {
         let map = load_templates().unwrap();
         let keys: Vec<&String> = map.keys().collect();
         assert_eq!(keys, vec!["b", "a", "c"]);
+    }
+
+    #[test]
+    fn candidate_from_env_returns_none_when_unset() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        // Use a name that is extremely unlikely to be set
+        env::remove_var("DA_TEST_UNSET_VAR_XYZ");
+        let result = super::candidate_from_env("DA_TEST_UNSET_VAR_XYZ", &["sub", "file.toml"]);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn candidate_from_env_returns_none_when_empty() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        let _g = EnvGuard::set("DA_TEST_EMPTY_VAR_XYZ", "");
+        let result = super::candidate_from_env("DA_TEST_EMPTY_VAR_XYZ", &["x"]);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn candidate_from_env_joins_suffix() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let _g = EnvGuard::set("DA_TEST_BASE_XYZ", dir.path().to_str().unwrap());
+        let result = super::candidate_from_env("DA_TEST_BASE_XYZ", &["a", "b.toml"]).unwrap();
+        assert_eq!(result, dir.path().join("a").join("b.toml"));
     }
 
     #[test]
