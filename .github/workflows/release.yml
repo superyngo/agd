@@ -74,7 +74,8 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: dispatch-agent.exe
-            asset_name: dispatch-agent-windows-x86_64.exe
+            asset_name: dispatch-agent-windows-x86_64
+            archive_ext: zip
             rustflags: "-C target-feature=+crt-static"
             opt_level: "3"
             lto: "thin"
@@ -84,7 +85,8 @@ jobs:
           - os: windows-latest
             target: i686-pc-windows-msvc
             artifact_name: dispatch-agent.exe
-            asset_name: dispatch-agent-windows-i686.exe
+            asset_name: dispatch-agent-windows-i686
+            archive_ext: zip
             rustflags: "-C target-feature=+crt-static"
             opt_level: "3"
             lto: "thin"
@@ -94,7 +96,8 @@ jobs:
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             artifact_name: dispatch-agent.exe
-            asset_name: dispatch-agent-windows-aarch64.exe
+            asset_name: dispatch-agent-windows-aarch64
+            archive_ext: zip
             rustflags: "-C target-feature=+crt-static"
             opt_level: "3"
             lto: "thin"
