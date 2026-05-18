@@ -228,6 +228,21 @@ jobs:
           Pop-Location
           Remove-Item -Recurse -Force staging
 
+      - name: Verify archive contents (Linux and macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar tzf ${{ matrix.asset_name }}.tar.gz | grep -qxF './config/cli-templates.toml'
+          tar tzf ${{ matrix.asset_name }}.tar.gz | grep -qxF './${{ matrix.artifact_name }}'
+
+      - name: Verify archive contents (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "${{ matrix.asset_name }}.zip" -DestinationPath verify_tmp -Force
+          if (-not (Test-Path "verify_tmp\${{ matrix.artifact_name }}")) { Write-Error "Missing binary"; exit 1 }
+          if (-not (Test-Path "verify_tmp\config\cli-templates.toml")) { Write-Error "Missing config"; exit 1 }
+          Remove-Item -Recurse -Force verify_tmp
+
       - name: Upload artifacts (Linux and macOS)
         if: matrix.os != 'windows-latest'
         uses: actions/upload-artifact@v4
