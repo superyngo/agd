@@ -322,9 +322,17 @@ jobs:
 
             ---
 
-            ## 📦 Downloads
+            ## 📦 Installation
 
-            Please download the appropriate version for your system from below.
+            **Linux/macOS:**
+            ```sh
+            mkdir -p /opt/dispatch-agent
+            tar xzf dispatch-agent-<platform>.tar.gz -C /opt/dispatch-agent
+            ln -s /opt/dispatch-agent/dispatch-agent /usr/local/bin/dispatch-agent
+            ```
+            > The binary reads `config/cli-templates.toml` from the same directory it is installed in. Use a dedicated directory (e.g. `/opt/dispatch-agent`) rather than extracting directly into `/usr/local/bin`.
+
+            **Windows:** Extract the `.zip` to a directory of your choice. Keep `dispatch-agent.exe` and the `config/` folder together in the same directory.
 
             ## 🔒 File Verification
 
