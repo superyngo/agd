@@ -272,21 +272,12 @@ jobs:
           echo "Artifacts directory:"
           ls -la artifacts/
           echo "Looking for artifacts:"
-          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.exe" \)
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \)
 
       - name: Prepare release files
         run: |
           mkdir -p release_files
-          find artifacts -type f -name "*.tar.gz" -exec cp {} release_files/ \;
-          for dir in artifacts/*; do
-            if [ -d "$dir" ] && [[ "$dir" == *"windows"* ]]; then
-              asset_name=$(basename "$dir")
-              exe_file="$dir/dispatch-agent.exe"
-              if [ -f "$exe_file" ]; then
-                cp "$exe_file" "release_files/$asset_name"
-              fi
-            fi
-          done
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release_files/ \;
           echo "Files in release_files:"
           ls -la release_files/
 
