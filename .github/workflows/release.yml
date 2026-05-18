@@ -120,6 +120,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Verify config file exists
+        shell: bash
+        run: test -f config/cli-templates.toml
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
