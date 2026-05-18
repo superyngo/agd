@@ -210,9 +210,23 @@ jobs:
       - name: Create tarball (Linux and macOS)
         if: matrix.os != 'windows-latest'
         run: |
-          cd target/${{ matrix.target }}/release
-          tar czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
-          mv ${{ matrix.asset_name }}.tar.gz ../../../
+          mkdir -p staging/config
+          cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} staging/
+          cp config/cli-templates.toml staging/config/
+          tar czf ${{ matrix.asset_name }}.tar.gz -C staging .
+          rm -rf staging
+
+      - name: Create zip (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path staging\config
+          Copy-Item "target\${{ matrix.target }}\release\${{ matrix.artifact_name }}" -Destination staging\
+          Copy-Item "config\cli-templates.toml" -Destination staging\config\
+          Push-Location staging
+          Compress-Archive -Path "${{ matrix.artifact_name }}", config -DestinationPath "..\${{ matrix.asset_name }}.zip"
+          Pop-Location
+          Remove-Item -Recurse -Force staging
 
       - name: Upload artifacts (Linux and macOS)
         if: matrix.os != 'windows-latest'
