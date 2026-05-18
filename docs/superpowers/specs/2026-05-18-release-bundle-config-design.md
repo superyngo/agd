@@ -17,7 +17,10 @@ Bundle `config/cli-templates.toml` (preserving the `config/` subdirectory) toget
 
 **Windows:** Artifact format changes from bare `.exe` to `.zip`. Any automation that downloads Windows releases by filename (e.g., `*-windows-*.exe`) must be updated to target `*-windows-*.zip` and extract before use. Note explicitly in release notes.
 
-**Linux/macOS:** The `.tar.gz` archives previously contained only the binary. After this change they also contain `config/`. Any script that extracts a specific file (`tar xzf ... dispatch-agent`) or uses `--strip-components` to handle a top-level directory (there is none, but scripts assuming a single-file archive may behave unexpectedly) may need updating. Note this content change in release notes.
+**Linux/macOS:** The `.tar.gz` archives previously contained only the binary. After this change they also contain `config/`. Two sub-changes:
+
+1. **Content added:** `config/cli-templates.toml` is now present. Scripts that work with specific file lists or assume a single-file archive may need updating.
+2. **Entry path prefix changed:** The old archive (built with `tar czf ... dispatch-agent`) stores entries as `dispatch-agent`. The new archive (built with `tar czf ... -C staging .`) stores entries as `./dispatch-agent`, `./config/`, `./config/cli-templates.toml`. Scripts parsing `tar tzf` output with patterns like `^dispatch-agent$` (no `./` prefix) will break. Note both changes in release notes.
 
 ## Archive Structure (all platforms)
 
@@ -49,21 +52,12 @@ Remove the `.exe` suffix from `asset_name` for all Windows targets, and add an `
 
 ### 2. Build Job — Preflight: Verify config file exists
 
-Add early in the build job (before any packaging step) to produce a clear error if the config file is missing, rather than a cryptic `cp: cannot stat` failure:
+Add early in the build job (before any packaging step) to produce a clear error if the config file is missing, rather than a cryptic `cp: cannot stat` failure. Using `shell: bash` makes this single step work cross-platform (GitHub Actions Windows runners have bash available):
 
 ```yaml
 - name: Verify config file exists
+  shell: bash
   run: test -f config/cli-templates.toml
-```
-
-On Windows, add the equivalent:
-
-```yaml
-- name: Verify config file exists (Windows)
-  if: matrix.os == 'windows-latest'
-  shell: pwsh
-  run: |
-    if (-not (Test-Path "config\cli-templates.toml")) { Write-Error "config\cli-templates.toml not found"; exit 1 }
 ```
 
 ### 3. Build Job — Linux/macOS: Modify "Create tarball" step
@@ -84,7 +78,7 @@ The checkout step already provides `config/cli-templates.toml` at the repo root.
 
 ### 4. Build Job — Windows: New "Create zip" step
 
-Add a new step after the strip steps (Windows skips stripping anyway) to produce a `.zip`, using explicit file paths (not glob) to prevent unintended files from being included:
+Add a new step after the strip steps (Windows skips stripping anyway) to produce a `.zip`. Use `Push-Location staging` to ensure `Compress-Archive` uses paths relative to the staging directory — without this, the zip entries would include the `staging\` prefix (e.g., `staging/dispatch-agent.exe`) instead of the intended archive-root placement:
 
 ```yaml
 - name: Create zip (Windows)
@@ -94,11 +88,13 @@ Add a new step after the strip steps (Windows skips stripping anyway) to produce
     New-Item -ItemType Directory -Force -Path staging\config
     Copy-Item "target\${{ matrix.target }}\release\${{ matrix.artifact_name }}" -Destination staging\
     Copy-Item "config\cli-templates.toml" -Destination staging\config\
-    Compress-Archive -Path staging\${{ matrix.artifact_name }}, staging\config -DestinationPath "${{ matrix.asset_name }}.zip"
+    Push-Location staging
+    Compress-Archive -Path "${{ matrix.artifact_name }}", config -DestinationPath "..\${{ matrix.asset_name }}.zip"
+    Pop-Location
     Remove-Item -Recurse -Force staging
 ```
 
-Using explicit `-Path staging\<binary>, staging\config` instead of `staging\*` prevents accidentally bundling hidden files or other workspace artifacts.
+**Note:** Flattening the archive (skipping staging, placing binary and config file at zip root without a `config/` subdirectory) is not viable. The runtime locates its config via `exe_dir.join("config/cli-templates.toml")` (`src/templates.rs:113`), so the `config/` subdirectory relative to the binary is required.
 
 ### 5. Build Job — Add Archive Verification Steps
 
@@ -194,13 +190,17 @@ The README command (`irm ... gpinstall.ps1 | iex`) itself does not need to chang
 
 ### Update `release.yml` release body template
 
-The release body template (lines 291–306 of `release.yml`) currently has no extraction instructions. Consider adding a brief extraction example to assist users who download manually:
+The release body template (lines 291–306 of `release.yml`) currently has no extraction instructions. Consider adding a brief extraction example. Note that the binary expects `config/cli-templates.toml` in the **same directory as the binary** (`exe_dir.join("config/cli-templates.toml")` in `src/templates.rs:113`), so a dedicated installation directory is recommended over extracting directly into `/usr/local/bin` (which would place `config/` at `/usr/local/bin/config/`):
 
 ```
-## 📦 Extraction
+## 📦 Installation
 
-**Linux/macOS:** `tar xzf dispatch-agent-<platform>.tar.gz -C /usr/local/bin`
-**Windows:** Extract the `.zip` and place both `dispatch-agent.exe` and the `config/` folder in the same directory.
+**Linux/macOS:**
+mkdir -p /opt/dispatch-agent
+tar xzf dispatch-agent-<platform>.tar.gz -C /opt/dispatch-agent
+ln -s /opt/dispatch-agent/dispatch-agent /usr/local/bin/dispatch-agent
+
+**Windows:** Extract the `.zip` to a directory of your choice. Keep `dispatch-agent.exe` and the `config/` folder together.
 ```
 
 ## Future Config Files
@@ -211,7 +211,13 @@ If additional files need to be bundled in future releases, both packaging steps 
 
 There is no single-point config for "files to bundle" — maintainers must keep the two steps in sync manually.
 
-## Non-Changes
+## Design Notes
+
+**Why `archive_ext` is explicit in the matrix (not derived from `matrix.os`):** An `env` approach (`ARCHIVE_EXT: ${{ matrix.os == 'windows-latest' && 'zip' || 'tar.gz' }}`) would reduce repetition across 13 entries but couples the extension to the OS rather than the target. Explicit `archive_ext` per entry makes future per-target overrides possible without touching the step logic.
+
+**Why the staging directory cannot be eliminated for Windows:** Placing binary and config file at archive root without a `config/` subdirectory would break the runtime. The binary locates its config via `exe_dir.join("config/cli-templates.toml")` (`src/templates.rs:113`). The directory structure is a runtime requirement, not just a packaging convention.
+
+
 
 - Archive naming for Linux/macOS stays unchanged (e.g., `dispatch-agent-linux-x86_64.tar.gz`)
 - All build, cross-compilation, and strip steps remain unchanged
@@ -219,7 +225,7 @@ There is no single-point config for "files to bundle" — maintainers must keep 
 
 ## Verification
 
-**The automated archive verification steps added in Section 4 are the primary safeguard.** Every build job verifies archive contents before uploading — manual inspection is not required for routine releases.
+**The automated archive verification steps added in Section 5 are the primary safeguard.** Every build job verifies archive contents before uploading — manual inspection is not required for routine releases.
 
 **If a manual workflow test is needed** (e.g., for a first-time deploy of this change):
 1. Temporarily set `draft: true` in the `Create Release` step to prevent a public release
