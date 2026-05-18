@@ -21,6 +21,31 @@ pub fn load_templates() -> anyhow::Result<IndexMap<String, Template>> {
 }
 
 #[allow(dead_code)]
+#[cfg(unix)]
+fn platform_fallback_candidates() -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    if let Some(p) = candidate_from_env(
+        "HOME",
+        &[".wenget", "apps", "dispatch-agent", "config", "cli-templates.toml"],
+    ) {
+        out.push(p);
+    }
+    if let Some(p) = candidate_from_env(
+        "HOME",
+        &[".local", "bin", "config", "cli-templates.toml"],
+    ) {
+        out.push(p);
+    }
+    out.push(std::path::PathBuf::from(
+        "/opt/wenget/apps/dispatch-agent/config/cli-templates.toml",
+    ));
+    out.push(std::path::PathBuf::from(
+        "/usr/local/bin/config/cli-templates.toml",
+    ));
+    out
+}
+
+#[allow(dead_code)]
 fn candidate_from_env(var: &str, suffix: &[&str]) -> Option<std::path::PathBuf> {
     let base = env::var(var).ok()?;
     if base.is_empty() {
@@ -158,6 +183,59 @@ mod tests {
         let map = load_templates().unwrap();
         let keys: Vec<&String> = map.keys().collect();
         assert_eq!(keys, vec!["b", "a", "c"]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn platform_fallback_candidates_unix_uses_home_and_absolutes() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let _g = EnvGuard::set("HOME", dir.path().to_str().unwrap());
+        let candidates = super::platform_fallback_candidates();
+
+        let home = dir.path();
+        let expected_home_wenget = home
+            .join(".wenget/apps/dispatch-agent/config/cli-templates.toml");
+        let expected_home_local = home.join(".local/bin/config/cli-templates.toml");
+        let expected_opt = std::path::PathBuf::from(
+            "/opt/wenget/apps/dispatch-agent/config/cli-templates.toml",
+        );
+        let expected_usr = std::path::PathBuf::from(
+            "/usr/local/bin/config/cli-templates.toml",
+        );
+
+        assert!(
+            candidates.contains(&expected_home_wenget),
+            "missing {} in {:?}",
+            expected_home_wenget.display(),
+            candidates
+        );
+        assert!(candidates.contains(&expected_home_local));
+        assert!(candidates.contains(&expected_opt));
+        assert!(candidates.contains(&expected_usr));
+
+        // Order: HOME entries come before absolute /opt and /usr/local entries
+        let pos = |needle: &std::path::PathBuf| candidates.iter().position(|c| c == needle).unwrap();
+        assert!(pos(&expected_home_wenget) < pos(&expected_opt));
+        assert!(pos(&expected_home_local) < pos(&expected_opt));
+        assert!(pos(&expected_opt) < pos(&expected_usr));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn platform_fallback_candidates_unix_skips_when_home_unset() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        let _g = EnvGuard::set("HOME", "");
+        let candidates = super::platform_fallback_candidates();
+        // Absolute paths still present
+        assert!(candidates.iter().any(|c| c.starts_with("/opt/wenget")));
+        assert!(candidates.iter().any(|c| c.starts_with("/usr/local/bin")));
+        // No path should contain ".wenget/apps/dispatch-agent" rooted in empty/HOME
+        assert!(
+            !candidates.iter().any(|c| c.to_string_lossy().starts_with(".wenget")),
+            "candidates leaked relative HOME path: {:?}",
+            candidates
+        );
     }
 
     #[test]
