@@ -30,51 +30,51 @@ jobs:
           # Linux builds
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-linux-x86_64
+            artifact_name: agd
+            asset_name: agd-linux-x86_64
             archive_ext: tar.gz
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-linux-i686
+            artifact_name: agd
+            asset_name: agd-linux-i686
             archive_ext: tar.gz
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-linux-x86_64-musl
+            artifact_name: agd
+            asset_name: agd-linux-x86_64-musl
             archive_ext: tar.gz
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-linux-armv7
+            artifact_name: agd
+            asset_name: agd-linux-armv7
             archive_ext: tar.gz
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-linux-aarch64
+            artifact_name: agd
+            asset_name: agd-linux-aarch64
             archive_ext: tar.gz
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-linux-aarch64-musl
+            artifact_name: agd
+            asset_name: agd-linux-aarch64-musl
             archive_ext: tar.gz
             cflags: "-U_FORTIFY_SOURCE"
             cc: "aarch64-linux-gnu-gcc"
           - os: ubuntu-latest
             target: i686-unknown-linux-musl
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-linux-i686-musl
+            artifact_name: agd
+            asset_name: agd-linux-i686-musl
             archive_ext: tar.gz
           - os: ubuntu-latest
             target: armv7-unknown-linux-musleabihf
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-linux-armv7-musl
+            artifact_name: agd
+            asset_name: agd-linux-armv7-musl
             archive_ext: tar.gz
           # Windows builds
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: dispatch-agent.exe
-            asset_name: dispatch-agent-windows-x86_64
+            artifact_name: agd.exe
+            asset_name: agd-windows-x86_64
             archive_ext: zip
             rustflags: "-C target-feature=+crt-static"
             opt_level: "3"
@@ -84,8 +84,8 @@ jobs:
             panic: "unwind"
           - os: windows-latest
             target: i686-pc-windows-msvc
-            artifact_name: dispatch-agent.exe
-            asset_name: dispatch-agent-windows-i686
+            artifact_name: agd.exe
+            asset_name: agd-windows-i686
             archive_ext: zip
             rustflags: "-C target-feature=+crt-static"
             opt_level: "3"
@@ -95,8 +95,8 @@ jobs:
             panic: "unwind"
           - os: windows-latest
             target: aarch64-pc-windows-msvc
-            artifact_name: dispatch-agent.exe
-            asset_name: dispatch-agent-windows-aarch64
+            artifact_name: agd.exe
+            asset_name: agd-windows-aarch64
             archive_ext: zip
             rustflags: "-C target-feature=+crt-static"
             opt_level: "3"
@@ -107,13 +107,13 @@ jobs:
           # macOS builds
           - os: macos-15-intel
             target: x86_64-apple-darwin
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-macos-x86_64
+            artifact_name: agd
+            asset_name: agd-macos-x86_64
             archive_ext: tar.gz
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: dispatch-agent
-            asset_name: dispatch-agent-macos-aarch64
+            artifact_name: agd
+            asset_name: agd-macos-aarch64
             archive_ext: tar.gz
 
     steps:
@@ -326,13 +326,13 @@ jobs:
 
             **Linux/macOS:**
             ```sh
-            mkdir -p /opt/dispatch-agent
-            tar xzf dispatch-agent-<platform>.tar.gz -C /opt/dispatch-agent
-            ln -s /opt/dispatch-agent/dispatch-agent /usr/local/bin/dispatch-agent
+            mkdir -p /opt/agd
+            tar xzf agd-<platform>.tar.gz -C /opt/agd
+            ln -s /opt/agd/agd /usr/local/bin/agd
             ```
-            > The binary reads `config/cli-templates.toml` from the same directory it is installed in. Use a dedicated directory (e.g. `/opt/dispatch-agent`) rather than extracting directly into `/usr/local/bin`.
+            > The binary reads `config/cli-templates.toml` from the same directory it is installed in. Use a dedicated directory (e.g. `/opt/agd`) rather than extracting directly into `/usr/local/bin`.
 
-            **Windows:** Extract the `.zip` to a directory of your choice. Keep `dispatch-agent.exe` and the `config/` folder together in the same directory.
+            **Windows:** Extract the `.zip` to a directory of your choice. Keep `agd.exe` and the `config/` folder together in the same directory.
 
             ## 🔒 File Verification
 

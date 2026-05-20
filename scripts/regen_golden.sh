@@ -13,11 +13,11 @@ fi
 echo "Building release binary..."
 cargo build --release --quiet
 
-BINARY="./target/release/dispatch-agent"
+BINARY="./target/release/agd"
 
 # Generate detect golden output
 echo "Generating detect golden output..."
-DISPATCH_AGENT_TEMPLATES="tests/fixtures/inputs/fake-detect-templates.toml" \
+AGD_TEMPLATES="tests/fixtures/inputs/fake-detect-templates.toml" \
   "$BINARY" detect > tests/fixtures/golden/detect_output.json
 
 # Generate init golden output

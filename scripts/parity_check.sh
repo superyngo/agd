@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compare Rust dispatch-agent output against the golden reference outputs
+# Compare Rust agd output against the golden reference outputs
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,7 +10,7 @@ if [ ! -f Cargo.toml ]; then
   exit 1
 fi
 
-BINARY="./target/release/dispatch-agent"
+BINARY="./target/release/agd"
 if [ ! -f "$BINARY" ]; then
   echo "Binary not found — building..."
   cargo build --release --quiet
@@ -40,7 +40,7 @@ check() {
 }
 
 # Check detect output
-DETECT_OUT=$(DISPATCH_AGENT_TEMPLATES="tests/fixtures/inputs/fake-detect-templates.toml" \
+DETECT_OUT=$(AGD_TEMPLATES="tests/fixtures/inputs/fake-detect-templates.toml" \
   "$BINARY" detect 2>/dev/null)
 check "detect JSON" "$DETECT_OUT" "tests/fixtures/golden/detect_output.json"
 
