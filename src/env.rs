@@ -12,14 +12,14 @@ pub fn resolve_env_var(ev: &EnvEntry) -> Option<(String, String)> {
         EnvEntry::File { name, path } => match std::fs::read_to_string(path) {
             Ok(contents) => Some((name.clone(), contents.trim().to_string())),
             Err(_) => {
-                eprintln!("dispatch-agent: failed to read env file: {path}");
+                eprintln!("agd: failed to read env file: {path}");
                 None
             }
         },
         EnvEntry::Env { name, var } => match std::env::var(var) {
             Ok(value) => Some((name.clone(), value)),
             Err(_) => {
-                eprintln!("dispatch-agent: env var '{var}' is not set, skipping");
+                eprintln!("agd: env var '{var}' is not set, skipping");
                 None
             }
         },
@@ -37,7 +37,7 @@ pub fn get_source_files(agent: &Agent) -> Vec<String> {
                 match expand_tilde(path) {
                     Ok(p) => Some(p.to_string_lossy().into_owned()),
                     Err(e) => {
-                        eprintln!("dispatch-agent: cannot expand source path '{path}': {e}");
+                        eprintln!("agd: cannot expand source path '{path}': {e}");
                         None
                     }
                 }

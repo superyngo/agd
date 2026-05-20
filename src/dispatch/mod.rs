@@ -79,7 +79,7 @@ pub fn cmd_dispatch(args: &DispatchArgs, config_path: Option<&Path>) -> anyhow::
                 // --dry-run is explicitly exempted from the no-config exit-1 rule
                 return Ok(());
             }
-            eprintln!("error: no config file found. Run 'dispatch-agent init' to create one.");
+            eprintln!("error: no config file found. Run 'agd init' to create one.");
             std::process::exit(1);
         }
     };

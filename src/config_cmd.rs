@@ -96,7 +96,7 @@ fn cmd_config_edit(config_arg: Option<&Path>) -> anyhow::Result<()> {
             path = found;
         } else {
             return Err(anyhow!(
-                "error: no config file found. Run 'dispatch-agent init' to create one."
+                "error: no config file found. Run 'agd init' to create one."
             ));
         }
     }
@@ -140,7 +140,7 @@ fn resolve_or_error(config_arg: Option<&Path>) -> anyhow::Result<PathBuf> {
         return Ok(found);
     }
     Err(anyhow!(
-        "error: no config file found. Run 'dispatch-agent init' to create one."
+        "error: no config file found. Run 'agd init' to create one."
     ))
 }
 

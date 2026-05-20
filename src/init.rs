@@ -152,11 +152,11 @@ fn validate_and_build(input: InitInput) -> anyhow::Result<Config> {
     })
 }
 
-const INIT_USAGE: &str = r#"dispatch-agent init — generate a config file from a JSON spec on stdin.
+const INIT_USAGE: &str = r#"agd init — generate a config file from a JSON spec on stdin.
 
 Usage:
-  echo '<JSON>' | dispatch-agent init
-  dispatch-agent init < spec.json
+  echo '<JSON>' | agd init
+  agd init < spec.json
 
 Example JSON:
 {
@@ -224,7 +224,7 @@ fn run_init_to(mut reader: impl Read, dest_override: Option<&Path>) -> anyhow::R
     write_atomic(&dest, toml_str.as_bytes())?;
 
     println!("{}", dest.display());
-    eprintln!("hint: run 'dispatch-agent config edit' to fine-tune your configuration");
+    eprintln!("hint: run 'agd config edit' to fine-tune your configuration");
 
     Ok(())
 }
