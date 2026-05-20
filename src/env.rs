@@ -52,7 +52,7 @@ pub fn get_source_files(agent: &Agent) -> Vec<String> {
 ///
 /// 1. Inherit all current env vars.
 /// 2. Overlay each non-Source entry (File / Env).
-/// 3. Set `DISPATCH_AGENT_DEPTH` to `current_depth + 1`.
+/// 3. Set `AGD_DEPTH` to `current_depth + 1`.
 pub fn build_env(agent: &Agent, current_depth: i64) -> HashMap<String, String> {
     let mut map: HashMap<String, String> = std::env::vars().collect();
 
@@ -63,7 +63,7 @@ pub fn build_env(agent: &Agent, current_depth: i64) -> HashMap<String, String> {
     }
 
     map.insert(
-        "DISPATCH_AGENT_DEPTH".to_string(),
+        "AGD_DEPTH".to_string(),
         (current_depth + 1).to_string(),
     );
 
@@ -151,7 +151,7 @@ mod tests {
 
         // Depth bumped
         assert_eq!(
-            env.get("DISPATCH_AGENT_DEPTH").map(String::as_str),
+            env.get("AGD_DEPTH").map(String::as_str),
             Some("4")
         );
     }

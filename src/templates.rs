@@ -120,7 +120,7 @@ fn find_first_existing(candidates: &[std::path::PathBuf]) -> Option<std::path::P
 fn resolve_templates_path() -> anyhow::Result<std::path::PathBuf> {
     let mut checked: Vec<std::path::PathBuf> = Vec::new();
 
-    if let Ok(p) = env::var("DISPATCH_AGENT_TEMPLATES") {
+    if let Ok(p) = env::var("AGD_TEMPLATES") {
         return Ok(std::path::PathBuf::from(p));
     }
 
@@ -153,7 +153,7 @@ fn resolve_templates_path() -> anyhow::Result<std::path::PathBuf> {
 #[allow(dead_code)]
 fn format_not_found_error(checked: &[std::path::PathBuf]) -> String {
     let mut s = String::from(
-        "cli-templates.toml not found. Set DISPATCH_AGENT_TEMPLATES to override. Searched:\n",
+        "cli-templates.toml not found. Set AGD_TEMPLATES to override. Searched:\n",
     );
     for p in checked {
         s.push_str("  ");
@@ -208,7 +208,7 @@ mod tests {
         let _lock = ENV_MUTEX.lock().unwrap();
         let dir = tempfile::tempdir().unwrap();
         let path = write_toml(dir.path(), "[test-cli]\nprompt_flag = \"-p\"\n");
-        let _guard = EnvGuard::set("DISPATCH_AGENT_TEMPLATES", path.to_str().unwrap());
+        let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
         let map = load_templates().unwrap();
         assert!(map.contains_key("test-cli"));
         assert_eq!(map["test-cli"].prompt_flag.as_deref(), Some("-p"));
@@ -219,7 +219,7 @@ mod tests {
         let _lock = ENV_MUTEX.lock().unwrap();
         let dir = tempfile::tempdir().unwrap();
         let path = write_toml(dir.path(), "[cli]\nprompt_flag = \"-p\"\n");
-        let _guard = EnvGuard::set("DISPATCH_AGENT_TEMPLATES", path.to_str().unwrap());
+        let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
         let map = load_templates().unwrap();
         assert_eq!(map["cli"].version_flag.as_deref(), Some("--version"));
     }
@@ -232,7 +232,7 @@ mod tests {
             dir.path(),
             "[cli]\nprompt_flag = \"-p\"\nversion_flag = \"\"\n",
         );
-        let _guard = EnvGuard::set("DISPATCH_AGENT_TEMPLATES", path.to_str().unwrap());
+        let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
         let map = load_templates().unwrap();
         assert_eq!(map["cli"].version_flag.as_deref(), Some(""));
     }
@@ -243,7 +243,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let content = "\u{FEFF}[cli]\nprompt_flag = \"-p\"\n";
         let path = write_toml(dir.path(), content);
-        let _guard = EnvGuard::set("DISPATCH_AGENT_TEMPLATES", path.to_str().unwrap());
+        let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
         let map = load_templates().unwrap();
         assert!(map.contains_key("cli"));
     }
@@ -255,7 +255,7 @@ mod tests {
         let toml =
             "[b]\nprompt_flag = \"-p\"\n[a]\nprompt_flag = \"-p\"\n[c]\nprompt_flag = \"-p\"\n";
         let path = write_toml(dir.path(), toml);
-        let _guard = EnvGuard::set("DISPATCH_AGENT_TEMPLATES", path.to_str().unwrap());
+        let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
         let map = load_templates().unwrap();
         let keys: Vec<&String> = map.keys().collect();
         assert_eq!(keys, vec!["b", "a", "c"]);
@@ -274,7 +274,7 @@ mod tests {
 
         let _h = EnvGuard::set("HOME", dir.path().to_str().unwrap());
         // Ensure earlier links in the chain miss:
-        env::remove_var("DISPATCH_AGENT_TEMPLATES");
+        env::remove_var("AGD_TEMPLATES");
         // exe_dir/config/cli-templates.toml normally won't exist for cargo-test binaries;
         // CARGO_MANIFEST_DIR/config/cli-templates.toml DOES exist in this repo, so
         // resolve_templates_path() will short-circuit there. We therefore validate the
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn resolve_templates_path_error_lists_paths() {
         let _lock = ENV_MUTEX.lock().unwrap();
-        env::remove_var("DISPATCH_AGENT_TEMPLATES");
+        env::remove_var("AGD_TEMPLATES");
         // We cannot force exe_dir and CARGO_MANIFEST_DIR misses without filesystem
         // gymnastics; instead, exercise the error formatter directly.
         let msg = super::format_not_found_error(&[
@@ -296,7 +296,7 @@ mod tests {
         ]);
         assert!(msg.contains("/tmp/a/cli-templates.toml"));
         assert!(msg.contains("/tmp/b/cli-templates.toml"));
-        assert!(msg.contains("DISPATCH_AGENT_TEMPLATES"));
+        assert!(msg.contains("AGD_TEMPLATES"));
     }
 
     #[cfg(windows)]
@@ -475,7 +475,7 @@ mod tests {
     fn missing_file_error() {
         let _lock = ENV_MUTEX.lock().unwrap();
         let _guard = EnvGuard::set(
-            "DISPATCH_AGENT_TEMPLATES",
+            "AGD_TEMPLATES",
             "/nonexistent/path/cli-templates.toml",
         );
         let result = load_templates();

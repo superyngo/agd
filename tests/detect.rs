@@ -12,7 +12,7 @@ fn detect_json() {
 
     let out = Command::new(env!("CARGO_BIN_EXE_agd"))
         .arg("detect")
-        .env("DISPATCH_AGENT_TEMPLATES", templates)
+        .env("AGD_TEMPLATES", templates)
         .env("HOME", dir.path())
         .output()
         .expect("failed to run detect");

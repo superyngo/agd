@@ -104,7 +104,7 @@ mod tests {
         let _lock = ENV_MUTEX.lock().unwrap();
         let dir = tempfile::tempdir().unwrap();
         let path = write_toml(dir.path(), toml);
-        let _guard = EnvGuard::set("DISPATCH_AGENT_TEMPLATES", path.to_str().unwrap());
+        let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
         crate::templates::load_templates().unwrap()
     }
 

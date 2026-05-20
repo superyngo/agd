@@ -29,12 +29,12 @@ fn rr_state_path() -> PathBuf {
 }
 
 fn current_depth() -> i64 {
-    match std::env::var("DISPATCH_AGENT_DEPTH") {
+    match std::env::var("AGD_DEPTH") {
         Ok(val) => match val.trim().parse::<i64>() {
             Ok(d) => d,
             Err(_) => {
                 eprintln!(
-                    "error: invalid DISPATCH_AGENT_DEPTH value '{}': expected integer",
+                    "error: invalid AGD_DEPTH value '{}': expected integer",
                     val
                 );
                 std::process::exit(1);
