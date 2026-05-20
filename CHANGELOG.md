@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v2.0.0 — 2026-05-20
+
+**Breaking:** project renamed from `dispatch-agent` to `agd` (agent dispatcher).
+
+### Renamed
+- Binary: `dispatch-agent` → `agd`
+- Cargo crate: `dispatch-agent` → `agd`
+- GitHub repo: `superyngo/dispatch-agent` → `superyngo/agd`
+- Environment variables: `DISPATCH_AGENT_TEMPLATES` → `AGD_TEMPLATES`, `DISPATCH_AGENT_DEPTH` → `AGD_DEPTH`
+- Config files: `~/.config/dispatch-agent.toml` → `~/.config/agd.toml`, `<git-root>/.config/dispatch-agent.toml` → `<git-root>/.config/agd.toml`
+- Cache directory: `<cache>/dispatch-agent/` → `<cache>/agd/`
+- Fallback install paths in `templates::platform_fallback_candidates`
+
+No migration shim is provided. Existing local installs must be reinstalled and reconfigured.
+
+### Added
+- `agd --version` flag (prints `agd 2.0.0`)
+- Template-resolution warnings and errors now include the absolute path to the loaded `cli-templates.toml`
+- New `[agy]` template for the antigravity CLI in shipped `cli-templates.toml`
+
+### Changed
+- `[gemini-npx]` template now enables version probing (`version_flag = "--version"`) and no longer passes `--skip-trust`
+- `load_templates()` now returns `(IndexMap, PathBuf)`
+- README `## Usage` is now complete: subcommand reference, configuration example, environment variables
+
+### Fixed
+- Misleading inline comment `# detect reports version as null` removed from all seven `version_flag = "--version"` declarations in `cli-templates.toml`
+
 ## [v1.1.2] - 2026-05-18
 
 ### Added

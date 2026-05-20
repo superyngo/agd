@@ -24,7 +24,7 @@ fn config_path_no_config() {
     );
     // Spec: stderr lists default search locations
     assert!(
-        stderr.contains(".config") || stderr.contains("dispatch-agent"),
+        stderr.contains(".config") || stderr.contains("agd"),
         "stderr should list search locations, got: {stderr}"
     );
 }

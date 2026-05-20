@@ -51,7 +51,7 @@ fn dry_run_happy_path() {
         .env("AGD_TEMPLATES", templates)
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -79,7 +79,7 @@ fn dry_run_no_prompt() {
         .env("AGD_TEMPLATES", templates)
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -101,7 +101,7 @@ fn list_no_config() {
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .current_dir(dir.path())
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     // Should exit 0 (falls back to detect)
     assert!(out.status.success());
@@ -122,7 +122,7 @@ fn list_with_config() {
         .env("HOME", dir.path())
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -149,13 +149,13 @@ fn show_config_no_config() {
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .current_dir(dir.path())
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     assert!(!out.status.success());
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.contains("no config file found"));
     assert!(
-        stderr.contains("init") || stderr.contains("dispatch-agent init"),
+        stderr.contains("init") || stderr.contains("agd init"),
         "stderr should suggest running init, got: {stderr}"
     );
 }
@@ -178,7 +178,7 @@ fn agent_not_found() {
         .env("HOME", dir.path())
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     assert!(!out.status.success());
     let stderr = String::from_utf8_lossy(&out.stderr);
@@ -206,7 +206,7 @@ fn tier_not_found() {
         .env("HOME", dir.path())
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     assert!(!out.status.success());
     let stderr = String::from_utf8_lossy(&out.stderr);
@@ -227,7 +227,7 @@ fn recursion_guard() {
         .env("HOME", dir.path())
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     assert!(!out.status.success());
     let stderr = String::from_utf8_lossy(&out.stderr);
@@ -251,7 +251,7 @@ fn fake_agent_exit_0() {
         .env("PATH", std::env::var("PATH").unwrap_or_default())
         .env("FAKE_AGENT_MODE", "exit-0")
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     assert_eq!(out.status.code(), Some(0));
 }
@@ -274,7 +274,7 @@ fn fake_agent_exit_nonzero() {
         .env("FAKE_AGENT_MODE", "exit-N")
         .env("FAKE_AGENT_EXIT_CODE", "42")
         .output()
-        .expect("failed to run dispatch-agent");
+        .expect("failed to run agd");
 
     // Dispatcher normalizes to exit 1 after exhausting all tiers; it does not
     // propagate the child's raw exit code (42) to avoid leaking agent internals.
