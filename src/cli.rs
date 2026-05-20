@@ -2,7 +2,7 @@ use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "agd")]
+#[command(name = "agd", version)]
 pub struct Cli {
     #[command(flatten)]
     pub global: GlobalArgs,
