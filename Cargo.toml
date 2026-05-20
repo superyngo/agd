@@ -1,11 +1,11 @@
 [package]
-name = "dispatch-agent"
-version = "1.1.2"
+name = "agd"
+version = "2.0.0"
 edition = "2021"
 rust-version = "1.77"
 
 [[bin]]
-name = "dispatch-agent"
+name = "agd"
 path = "src/main.rs"
 
 [[bin]]
