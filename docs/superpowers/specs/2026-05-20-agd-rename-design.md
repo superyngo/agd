@@ -38,8 +38,14 @@ The following table is the complete identifier replacement set. Anything not lis
 | Cache directory | `<cache_dir>/dispatch-agent/rr-state.json` | `<cache_dir>/agd/rr-state.json` |
 | User config file | `~/.config/dispatch-agent.toml` | `~/.config/agd.toml` |
 | Project config file | `<git-root>/.config/dispatch-agent.toml` | `<git-root>/.config/agd.toml` |
-| Fallback install paths in `src/templates.rs` (both `unix` and `windows` `cfg` branches, ~13 occurrences across path-segment array literals and `/opt/.../...` / `/usr/local/.../...` string literals) | every `dispatch-agent` path segment | `agd` |
+| Fallback install paths in `src/templates.rs::platform_fallback_candidates` (both `unix` and `windows` `cfg` branches: path-segment array literals plus `/opt/wenget/apps/dispatch-agent/...` and `/usr/local/bin/...` string literals) | every `dispatch-agent` path segment | `agd` |
 | Test fixture strings in `src/detect.rs:123,166` (`"dispatch-agent-fake-nonexistent-xyz"` synthetic binary name used to assert detect-miss behavior) | `dispatch-agent-fake-nonexistent-xyz` | `agd-fake-nonexistent-xyz` |
+| User-facing strings in `src/config_cmd.rs:58,61,64,99,143` (config-path hints in `cmd_config_path` / `cmd_config_show`; error message `"Run 'dispatch-agent init' to create one."` in two sites) | `dispatch-agent` | `agd` |
+| User-facing error prefixes in `src/env.rs:15,22,40` (`"dispatch-agent: ..."` prefix on three eprintln sites) and the env-var literal at `src/env.rs:66,154` plus the doc-comment at `src/env.rs:55` | `dispatch-agent` / `DISPATCH_AGENT_DEPTH` | `agd` / `AGD_DEPTH` |
+| Path-label match and test fixtures in `src/dispatch/display.rs:119,155,168` (display logic checks `.contains(".config/dispatch-agent.toml")`; tests assert against fake CLI name and `[✗] missing (...)` line) | `dispatch-agent` / `dispatch-agent-fake-nonexistent-cli-xyz` | `agd` / `agd-fake-nonexistent-cli-xyz` |
+| Test code in `src/config.rs:95,100` (test joins `dispatch-agent.toml` to fixture dirs) | `dispatch-agent.toml` | `agd.toml` |
+| Test fixtures in `tests/snapshots_test.rs:25,48,95` (`"dispatch-agent-nonexistent-xyz"` and `/tmp/dispatch-agent-test.toml`) | `dispatch-agent*` | `agd*` |
+| Crate-name imports in tests (`use dispatch_agent::...`) | follow automatically from the Cargo `package.name` change — Rust crate name derives from package name with `-` → `_` | `use agd::...` |
 | GitHub repository | `superyngo/dispatch-agent` | `superyngo/agd` |
 | `README.md` `APP_NAME` and `REPO` install-script values | `dispatch-agent` / `superyngo/dispatch-agent` | `agd` / `superyngo/agd` |
 | User-facing strings in `src/init.rs` (`INIT_USAGE`, hint messages, examples) | `dispatch-agent` | `agd` |
@@ -59,7 +65,7 @@ The following table is the complete identifier replacement set. Anything not lis
 
 ## 4. Feature: `agd --version`
 
-`src/cli.rs:4` is modified so that the `#[derive(Parser)]` struct also carries `#[command(version)]`. Clap will read `CARGO_PKG_VERSION` at compile time and emit `agd 2.0.0` when the user runs `agd --version`.
+`src/cli.rs:5` (the `#[command(name = "dispatch-agent")]` attribute on the `Cli` struct) is modified to also carry `version`. Clap will read `CARGO_PKG_VERSION` at compile time and emit `agd 2.0.0` when the user runs `agd --version`.
 
 ```rust
 #[derive(Parser)]
@@ -78,7 +84,7 @@ A new integration test (location: `tests/version.rs`) spawns the built binary wi
 
 ### 5.1 Current state
 
-`src/templates.rs::load_templates()` returns `IndexMap<String, Template>` and discards the resolved `PathBuf`. The six warning/error sites in `src/dispatch/mod.rs` (lines 137, 145, 188, 197, 280, 289) print only the literal string `"cli-templates.toml"`. When a user sees:
+`src/templates.rs::load_templates()` returns `IndexMap<String, Template>` and does not expose the resolved `PathBuf` to its callers. The six warning/error sites in `src/dispatch/mod.rs` (lines 137, 145, 188, 197, 280, 289) print only the literal string `"cli-templates.toml"`. When a user sees:
 
 ```
 warning: template 'agy' for agent 'antigravity-cli' not found in cli-templates.toml
@@ -90,7 +96,9 @@ they cannot tell *which* `cli-templates.toml` was loaded — the resolver checks
 ### 5.2 Change
 
 1. `load_templates()` signature changes from `-> anyhow::Result<IndexMap<String, Template>>` to `-> anyhow::Result<(IndexMap<String, Template>, PathBuf)>`. The `PathBuf` is the absolute path returned by `resolve_templates_path()`.
-2. `src/dispatch/mod.rs::run()` is updated to destructure the tuple and thread `templates_path: &Path` through to `dispatch_single`, `dispatch_tiers`, and `dry_run`. Each of those three functions grows one parameter.
+2. `src/dispatch/mod.rs::cmd_dispatch()` is updated to destructure the tuple and thread `templates_path: &Path` through to `dispatch_single`, `dispatch_tiers`, and `dry_run`. Each of those three functions grows one parameter.
+
+   **Caller fan-out:** every other caller of `load_templates()` must also destructure the new tuple. Confirmed sites include `cmd_detect` in `src/detect.rs`, `cmd_config_list` in `src/config_cmd.rs`, the `detect.rs` test helper, and unit tests inside `src/templates.rs`. Sites that do not need the path discard it with `let (templates, _) = load_templates()?;`. These are purely mechanical destructures — no behavioral change.
 3. The six warning/error strings are rewritten as follows (using `templates_path.display()`):
 
    | Site | New format |
@@ -102,7 +110,7 @@ they cannot tell *which* `cli-templates.toml` was loaded — the resolver checks
    | `mod.rs:280` (dispatch_tiers, template not found) | `warning: template '{tmpl}' for agent '{agent}' not found in {path}` |
    | `mod.rs:289` (dispatch_tiers, unverified template) | `warning: agent '{agent}' uses unverified template '{tmpl}', skipping ({path})` |
 
-4. `src/detect.rs` — at time of writing, `detect.rs` reads templates only to enumerate names and does not emit template-resolution warnings, so it requires no changes for §5. (Its test fixture strings are still renamed per §3.)
+4. `src/detect.rs` does not emit template-resolution warnings, so §5's warning-message changes do not touch it. It does, however, fall under the mechanical destructure described in step 2 (its `cmd_detect` calls `load_templates()`), and its test fixture strings are still renamed per §3.
 
 ### 5.3 Tests
 
@@ -116,11 +124,11 @@ Land the uncommitted working-tree changes with two corrections:
 | Change | Action |
 |---|---|
 | New `[agy]` template (prompt_flag `-p`, default version probe) | Keep |
-| Five explicit `version_flag = "--version"` rows on `[claude]`, `[gemini]`, `[codex]`, `[copilot]`, `[opencode]` | Keep — documents intent even though it matches the default applied at load time |
-| `[npx-gemini]` switched from `version_flag = ""` to `version_flag = "--version"` | Keep — enables version probing for the npx-wrapped binary |
-| `[npx-gemini]` removed `--skip-trust` from `extra_args` | Keep |
-| Misleading inline comment `# detect reports version as null` next to the five explicit `--version` rows | **Fix** — replace with `# explicit (matches default)` (or equivalent phrasing) |
-| Comment block above `[npx-gemini]` showing `--skip-trust` in an example invocation | **Fix** — drop the `--skip-trust` from the example to match the new `extra_args` |
+| Seven explicit `version_flag = "--version"` rows on `[claude]`, `[gemini]`, `[codex]`, `[copilot]`, `[opencode]`, `[gemini-npx]`, `[agy]` | Keep the explicit declarations — documents intent even though it matches the default applied at load time |
+| `[gemini-npx]` switched from `version_flag = ""` to `version_flag = "--version"` | Keep — enables version probing for the npx-wrapped binary |
+| `[gemini-npx]` removed `--skip-trust` from `extra_args` | Keep |
+| Misleading inline comment `# detect reports version as null` next to **all seven** `version_flag = "--version"` rows | **Fix** — replace each with `# explicit (matches default)` (or equivalent phrasing). All seven rows must be updated. |
+| Comment block immediately below `[gemini-npx]` (`config/cli-templates.toml:119-120`) showing `--skip-trust` in an example invocation | **Fix** — drop the `--skip-trust` token from the example invocation to match the new `extra_args` |
 
 ## 7. Feature: README `## Usage`
 
