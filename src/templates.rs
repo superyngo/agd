@@ -5,7 +5,7 @@ use std::{env, fs};
 use crate::types::Template;
 
 #[allow(dead_code)]
-pub fn load_templates() -> anyhow::Result<IndexMap<String, Template>> {
+pub fn load_templates() -> anyhow::Result<(IndexMap<String, Template>, std::path::PathBuf)> {
     let path = resolve_templates_path()?;
     let raw = fs::read_to_string(&path)
         .with_context(|| format!("reading templates file {}", path.display()))?;
@@ -17,7 +17,7 @@ pub fn load_templates() -> anyhow::Result<IndexMap<String, Template>> {
             tmpl.version_flag = Some("--version".to_string());
         }
     }
-    Ok(map)
+    Ok((map, path))
 }
 
 #[allow(dead_code)]
@@ -209,7 +209,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = write_toml(dir.path(), "[test-cli]\nprompt_flag = \"-p\"\n");
         let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
-        let map = load_templates().unwrap();
+        let (map, _path) = load_templates().unwrap();
         assert!(map.contains_key("test-cli"));
         assert_eq!(map["test-cli"].prompt_flag.as_deref(), Some("-p"));
     }
@@ -220,7 +220,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = write_toml(dir.path(), "[cli]\nprompt_flag = \"-p\"\n");
         let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
-        let map = load_templates().unwrap();
+        let (map, _path) = load_templates().unwrap();
         assert_eq!(map["cli"].version_flag.as_deref(), Some("--version"));
     }
 
@@ -233,7 +233,7 @@ mod tests {
             "[cli]\nprompt_flag = \"-p\"\nversion_flag = \"\"\n",
         );
         let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
-        let map = load_templates().unwrap();
+        let (map, _path) = load_templates().unwrap();
         assert_eq!(map["cli"].version_flag.as_deref(), Some(""));
     }
 
@@ -244,7 +244,7 @@ mod tests {
         let content = "\u{FEFF}[cli]\nprompt_flag = \"-p\"\n";
         let path = write_toml(dir.path(), content);
         let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
-        let map = load_templates().unwrap();
+        let (map, _path) = load_templates().unwrap();
         assert!(map.contains_key("cli"));
     }
 
@@ -256,7 +256,7 @@ mod tests {
             "[b]\nprompt_flag = \"-p\"\n[a]\nprompt_flag = \"-p\"\n[c]\nprompt_flag = \"-p\"\n";
         let path = write_toml(dir.path(), toml);
         let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
-        let map = load_templates().unwrap();
+        let (map, _path) = load_templates().unwrap();
         let keys: Vec<&String> = map.keys().collect();
         assert_eq!(keys, vec!["b", "a", "c"]);
     }

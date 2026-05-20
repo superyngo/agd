@@ -280,3 +280,47 @@ fn fake_agent_exit_nonzero() {
     // propagate the child's raw exit code (42) to avoid leaking agent internals.
     assert_eq!(out.status.code(), Some(1));
 }
+
+#[test]
+fn dispatch_warning_includes_templates_path() {
+    use std::fs;
+    use tempfile::tempdir;
+
+    let tmp = tempdir().expect("tempdir");
+    let templates_path = tmp.path().join("cli-templates.toml");
+    // Empty file — every template name will be "not found"
+    fs::write(&templates_path, "").expect("write empty templates");
+
+    let config_path = tmp.path().join("agd.toml");
+    fs::write(
+        &config_path,
+        r#"
+version = 1
+[[tiers]]
+id = "primary"
+  [[tiers.agents]]
+  id = "ghost"
+  cli = "nope"
+  enabled = true
+"#,
+    )
+    .expect("write agd.toml");
+
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_agd"))
+        .env("AGD_TEMPLATES", &templates_path)
+        .arg("--config")
+        .arg(&config_path)
+        .arg("dispatch")
+        .arg("--dry-run")
+        .arg("-p")
+        .arg("hi")
+        .output()
+        .expect("spawn");
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains(&templates_path.display().to_string()),
+        "expected warning to include templates path '{}', got stderr: {stderr}",
+        templates_path.display()
+    );
+}

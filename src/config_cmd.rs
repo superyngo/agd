@@ -32,7 +32,7 @@ fn cmd_config_list(config_arg: Option<&Path>) -> anyhow::Result<()> {
             print!("{}", format_list(&config));
         }
         None => {
-            let templates = load_templates()?;
+            let (templates, _templates_path) = load_templates()?;
             let detect = run_detect(&templates);
             print!("{}", format_list_detect(&detect));
         }

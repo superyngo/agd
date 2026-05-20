@@ -69,7 +69,7 @@ pub fn cmd_dispatch(args: &DispatchArgs, config_path: Option<&Path>) -> anyhow::
         ));
     }
 
-    let templates = load_templates()?;
+    let (templates, templates_path) = load_templates()?;
 
     // Load config for remaining modes
     let config = match find_config(config_path) {
@@ -88,7 +88,7 @@ pub fn cmd_dispatch(args: &DispatchArgs, config_path: Option<&Path>) -> anyhow::
 
     // --dry-run mode
     if args.dry_run {
-        return dry_run(&config, &templates, &prompt, &args.tier, &args.agent);
+        return dry_run(&config, &templates, &templates_path, &prompt, &args.tier, &args.agent);
     }
 
     // Setup signal watcher (once at start of dispatch)
@@ -100,10 +100,10 @@ pub fn cmd_dispatch(args: &DispatchArgs, config_path: Option<&Path>) -> anyhow::
     let _watcher = process::windows::start_signal_watcher(state.clone(), shutdown.clone());
 
     let result = if let Some(ref agent_id) = args.agent {
-        dispatch_single(&config, &templates, &prompt, agent_id, args, depth, &state)
+        dispatch_single(&config, &templates, &templates_path, &prompt, agent_id, args, depth, &state)
     } else {
         dispatch_tiers(
-            &config, &templates, &prompt, &args.tier, args, depth, &state,
+            &config, &templates, &templates_path, &prompt, &args.tier, args, depth, &state,
         )
     };
 
@@ -120,6 +120,7 @@ pub fn cmd_dispatch(args: &DispatchArgs, config_path: Option<&Path>) -> anyhow::
 fn dry_run(
     config: &Config,
     templates: &IndexMap<String, Template>,
+    templates_path: &Path,
     prompt: &str,
     tier: &Option<String>,
     agent: &Option<String>,
@@ -134,16 +135,16 @@ fn dry_run(
             Some(t) => t,
             None => {
                 eprintln!(
-                    "warning: template '{}' for agent '{}' not found in cli-templates.toml",
-                    tmpl_name, agent.id
+                    "warning: template '{}' for agent '{}' not found in {}",
+                    tmpl_name, agent.id, templates_path.display()
                 );
                 continue;
             }
         };
         if !template.verified {
             eprintln!(
-                "warning: agent '{}' uses unverified template '{}', skipping",
-                agent.id, tmpl_name
+                "warning: agent '{}' uses unverified template '{}', skipping ({})",
+                agent.id, tmpl_name, templates_path.display()
             );
             continue;
         }
@@ -158,6 +159,7 @@ fn dry_run(
 fn dispatch_single(
     config: &Config,
     templates: &IndexMap<String, Template>,
+    templates_path: &Path,
     prompt: &str,
     agent_id: &str,
     args: &DispatchArgs,
@@ -185,8 +187,8 @@ fn dispatch_single(
         Some(t) => t,
         None => {
             eprintln!(
-                "error: template '{}' for agent '{}' not found in cli-templates.toml",
-                tmpl_name, agent.id
+                "error: template '{}' for agent '{}' not found in {}",
+                tmpl_name, agent.id, templates_path.display()
             );
             std::process::exit(1);
         }
@@ -194,8 +196,8 @@ fn dispatch_single(
 
     if !template.verified {
         eprintln!(
-            "error: agent '{}' uses unverified template '{}'; cannot dispatch",
-            agent.id, tmpl_name
+            "error: agent '{}' uses unverified template '{}'; cannot dispatch ({})",
+            agent.id, tmpl_name, templates_path.display()
         );
         std::process::exit(1);
     }
@@ -244,6 +246,7 @@ fn dispatch_single(
 fn dispatch_tiers(
     config: &Config,
     templates: &IndexMap<String, Template>,
+    templates_path: &Path,
     prompt: &str,
     tier_filter: &Option<String>,
     args: &DispatchArgs,
@@ -277,8 +280,8 @@ fn dispatch_tiers(
                 Some(t) => t,
                 None => {
                     eprintln!(
-                        "warning: template '{}' for agent '{}' not found in cli-templates.toml",
-                        tmpl_name, agent.id
+                        "warning: template '{}' for agent '{}' not found in {}",
+                        tmpl_name, agent.id, templates_path.display()
                     );
                     continue;
                 }
@@ -286,8 +289,8 @@ fn dispatch_tiers(
 
             if !template.verified {
                 eprintln!(
-                    "warning: agent '{}' uses unverified template '{}', skipping",
-                    agent.id, tmpl_name
+                    "warning: agent '{}' uses unverified template '{}', skipping ({})",
+                    agent.id, tmpl_name, templates_path.display()
                 );
                 continue;
             }

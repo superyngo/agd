@@ -53,7 +53,7 @@ fn probe_version(path: &std::path::Path, template: &Template) -> Option<String> 
 
 #[allow(dead_code)]
 pub fn cmd_detect() -> anyhow::Result<()> {
-    let templates = crate::templates::load_templates()?;
+    let (templates, _templates_path) = crate::templates::load_templates()?;
     let detect = run_detect(&templates);
     println!("{}", serde_json::to_string_pretty(&detect)?);
     Ok(())
@@ -105,7 +105,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = write_toml(dir.path(), toml);
         let _guard = EnvGuard::set("AGD_TEMPLATES", path.to_str().unwrap());
-        crate::templates::load_templates().unwrap()
+        crate::templates::load_templates().unwrap().0
     }
 
     #[test]
