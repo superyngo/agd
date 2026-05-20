@@ -22,7 +22,7 @@ fn test_format_list_multi_tier() {
                     },
                     Agent {
                         id: "missing".into(),
-                        cli: "dispatch-agent-nonexistent-xyz".into(),
+                        cli: "agd-nonexistent-xyz".into(),
                         model: None,
                         args: vec![],
                         env: vec![],
@@ -45,7 +45,7 @@ fn test_format_list_multi_tier() {
                     },
                     Agent {
                         id: "missing2".into(),
-                        cli: "dispatch-agent-nonexistent-xyz".into(),
+                        cli: "agd-nonexistent-xyz".into(),
                         model: Some("claude".into()),
                         args: vec![],
                         env: vec![],
@@ -92,7 +92,7 @@ fn test_format_show_config_all_env_variants() {
 
     insta::assert_snapshot!(
         "format_show_config_all_env_variants",
-        format_show_config(&config, Path::new("/tmp/dispatch-agent-test.toml"))
+        format_show_config(&config, Path::new("/tmp/agd-test.toml"))
     );
 }
 

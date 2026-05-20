@@ -4,8 +4,8 @@ expression: format_list(&config)
 ---
 Tier: primary
   [✓] shell (sh)
-  [✗] missing (dispatch-agent-nonexistent-xyz)
+  [✗] missing (agd-nonexistent-xyz)
 
 Tier: fallback
   [✓] shell2 (sh)
-  [✗] missing2 (dispatch-agent-nonexistent-xyz)
+  [✗] missing2 (agd-nonexistent-xyz)

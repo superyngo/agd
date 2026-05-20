@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn detect_missing_binary() {
         let templates = load_from_toml(
-            "[fake]\ndetect_binary = \"dispatch-agent-fake-nonexistent-xyz\"\nprompt_positional = true\n",
+            "[fake]\ndetect_binary = \"agd-fake-nonexistent-xyz\"\nprompt_positional = true\n",
         );
         let result = run_detect(&templates);
         let info = &result["fake"];
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn detect_insertion_order() {
         let templates = load_from_toml(
-            "[sh]\ndetect_binary = \"sh\"\nprompt_positional = true\n\n[fake]\ndetect_binary = \"dispatch-agent-fake-nonexistent-xyz\"\nprompt_positional = true\n",
+            "[sh]\ndetect_binary = \"sh\"\nprompt_positional = true\n\n[fake]\ndetect_binary = \"agd-fake-nonexistent-xyz\"\nprompt_positional = true\n",
         );
         let result = run_detect(&templates);
         let keys: Vec<&String> = result.keys().collect();

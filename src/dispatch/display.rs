@@ -152,7 +152,7 @@ mod tests {
                     },
                     Agent {
                         id: "missing".into(),
-                        cli: "dispatch-agent-fake-nonexistent-cli-xyz".into(),
+                        cli: "agd-fake-nonexistent-cli-xyz".into(),
                         model: None,
                         args: vec![],
                         env: vec![],
@@ -165,7 +165,7 @@ mod tests {
         let out = format_list(&config);
         assert!(out.contains("[✓] shell (sh)"), "sh should be [✓]");
         assert!(
-            out.contains("[✗] missing (dispatch-agent-fake-nonexistent-cli-xyz)"),
+            out.contains("[✗] missing (agd-fake-nonexistent-cli-xyz)"),
             "fake cli should be [✗]"
         );
     }
