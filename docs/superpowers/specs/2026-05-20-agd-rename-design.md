@@ -200,7 +200,7 @@ The release is shippable when:
 
 1. `cargo build --release` succeeds.
 2. `cargo test` passes; no test references `dispatch-agent`, `DISPATCH_AGENT_*`, or the old config-file names.
-3. `rg -i 'dispatch[-_ ]?agent' -g '!CHANGELOG.md' -g '!docs/superpowers/specs/2026-05-18-*' -g '!docs/superpowers/plans/2026-05-18-*' -g '!docs/tmp' -g '!target'` returns zero matches.
+3. `rg -i 'dispatch[-_ ]?agent' -g '!CHANGELOG.md' -g '!docs/superpowers/**' -g '!docs/tmp' -g '!target' -g '!Cargo.lock'` returns zero matches. (The `docs/superpowers/**` exclusion covers both the preserved 2026-05-18 spec/plan artifacts and this rename spec, which itself documents the old name in its mapping table.)
 4. The built binary responds to `agd --version` with the package version.
 5. Manual smoke test passes: `agd detect`, `agd config path`, `agd dispatch --dry-run --tier primary -p "test"` — all output references `agd` (never `dispatch-agent`) and any template warning includes the absolute path to the loaded `cli-templates.toml`.
 6. `README.md` renders with all four §7.1 sections present, install commands using `agd` / `superyngo/agd`, and the §7.2 TOML example verbatim.
