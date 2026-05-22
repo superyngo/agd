@@ -122,7 +122,7 @@ jobs:
 
       - name: Verify config file exists
         shell: bash
-        run: test -f config/cli-templates.toml
+        run: test -f Resources/cli-templates.toml
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -210,9 +210,9 @@ jobs:
       - name: Create tarball (Linux and macOS)
         if: matrix.os != 'windows-latest'
         run: |
-          mkdir -p staging/config
+          mkdir -p staging/Resources
           cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} staging/
-          cp config/cli-templates.toml staging/config/
+          cp Resources/cli-templates.toml staging/Resources/
           tar czf ${{ matrix.asset_name }}.tar.gz -C staging .
           rm -rf staging
 
@@ -220,18 +220,18 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path staging\config
+          New-Item -ItemType Directory -Force -Path staging\Resources
           Copy-Item "target\${{ matrix.target }}\release\${{ matrix.artifact_name }}" -Destination staging\
-          Copy-Item "config\cli-templates.toml" -Destination staging\config\
+          Copy-Item "Resources\cli-templates.toml" -Destination staging\Resources\
           Push-Location staging
-          Compress-Archive -Path "${{ matrix.artifact_name }}", config -DestinationPath "..\${{ matrix.asset_name }}.zip"
+          Compress-Archive -Path "${{ matrix.artifact_name }}", Resources -DestinationPath "..\${{ matrix.asset_name }}.zip"
           Pop-Location
           Remove-Item -Recurse -Force staging
 
       - name: Verify archive contents (Linux and macOS)
         if: matrix.os != 'windows-latest'
         run: |
-          tar tzf ${{ matrix.asset_name }}.tar.gz | grep -qxF './config/cli-templates.toml'
+          tar tzf ${{ matrix.asset_name }}.tar.gz | grep -qxF './Resources/cli-templates.toml'
           tar tzf ${{ matrix.asset_name }}.tar.gz | grep -qxF './${{ matrix.artifact_name }}'
 
       - name: Verify archive contents (Windows)
@@ -240,7 +240,7 @@ jobs:
         run: |
           Expand-Archive -Path "${{ matrix.asset_name }}.zip" -DestinationPath verify_tmp -Force
           if (-not (Test-Path "verify_tmp\${{ matrix.artifact_name }}")) { Write-Error "Missing binary"; exit 1 }
-          if (-not (Test-Path "verify_tmp\config\cli-templates.toml")) { Write-Error "Missing config"; exit 1 }
+          if (-not (Test-Path "verify_tmp\Resources\cli-templates.toml")) { Write-Error "Missing Resources"; exit 1 }
           Remove-Item -Recurse -Force verify_tmp
 
       - name: Upload artifacts
@@ -330,9 +330,9 @@ jobs:
             tar xzf agd-<platform>.tar.gz -C /opt/agd
             ln -s /opt/agd/agd /usr/local/bin/agd
             ```
-            > The binary reads `config/cli-templates.toml` from the same directory it is installed in. Use a dedicated directory (e.g. `/opt/agd`) rather than extracting directly into `/usr/local/bin`.
+            > The binary reads `Resources/cli-templates.toml` from the same directory it is installed in. Use a dedicated directory (e.g. `/opt/agd`) rather than extracting directly into `/usr/local/bin`.
 
-            **Windows:** Extract the `.zip` to a directory of your choice. Keep `agd.exe` and the `config/` folder together in the same directory.
+            **Windows:** Extract the `.zip` to a directory of your choice. Keep `agd.exe` and the `Resources/` folder together in the same directory.
 
             ## 🔒 File Verification
 

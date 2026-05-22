@@ -20,33 +20,46 @@ pub fn load_templates() -> anyhow::Result<(IndexMap<String, Template>, std::path
     Ok((map, path))
 }
 
+// Subdirectories searched within each install location. "Resources" is the
+// current layout; "config" is kept for backward compatibility with older
+// installs from before the rename.
+#[allow(dead_code)]
+const TEMPLATE_SUBDIRS: &[&str] = &["Resources", "config"];
+
 #[allow(dead_code)]
 #[cfg(windows)]
 fn platform_fallback_candidates() -> Vec<std::path::PathBuf> {
     let mut out = Vec::new();
-    if let Some(p) = candidate_from_env(
-        "USERPROFILE",
-        &[".wenget", "apps", "agd", "config", "cli-templates.toml"],
-    ) {
-        out.push(p);
+    for sub in TEMPLATE_SUBDIRS {
+        if let Some(p) = candidate_from_env(
+            "USERPROFILE",
+            &[".wenget", "apps", "agd", sub, "cli-templates.toml"],
+        ) {
+            out.push(p);
+        }
     }
-    if let Some(p) = candidate_from_env(
-        "LOCALAPPDATA",
-        &["Programs", "agd", "config", "cli-templates.toml"],
-    ) {
-        out.push(p);
+    for sub in TEMPLATE_SUBDIRS {
+        if let Some(p) = candidate_from_env(
+            "LOCALAPPDATA",
+            &["Programs", "agd", sub, "cli-templates.toml"],
+        ) {
+            out.push(p);
+        }
     }
-    if let Some(p) = candidate_from_env(
-        "ProgramW6432",
-        &["wenget", "app", "agd", "config", "cli-templates.toml"],
-    ) {
-        out.push(p);
+    for sub in TEMPLATE_SUBDIRS {
+        if let Some(p) = candidate_from_env(
+            "ProgramW6432",
+            &["wenget", "app", "agd", sub, "cli-templates.toml"],
+        ) {
+            out.push(p);
+        }
     }
-    if let Some(p) = candidate_from_env(
-        "ProgramFiles",
-        &["gpinstall", "config", "cli-templates.toml"],
-    ) {
-        out.push(p);
+    for sub in TEMPLATE_SUBDIRS {
+        if let Some(p) =
+            candidate_from_env("ProgramFiles", &["gpinstall", sub, "cli-templates.toml"])
+        {
+            out.push(p);
+        }
     }
     out
 }
@@ -55,22 +68,29 @@ fn platform_fallback_candidates() -> Vec<std::path::PathBuf> {
 #[cfg(unix)]
 fn platform_fallback_candidates() -> Vec<std::path::PathBuf> {
     let mut out = Vec::new();
-    if let Some(p) = candidate_from_env(
-        "HOME",
-        &[".wenget", "apps", "agd", "config", "cli-templates.toml"],
-    ) {
-        out.push(p);
+    for sub in TEMPLATE_SUBDIRS {
+        if let Some(p) = candidate_from_env(
+            "HOME",
+            &[".wenget", "apps", "agd", sub, "cli-templates.toml"],
+        ) {
+            out.push(p);
+        }
     }
-    if let Some(p) = candidate_from_env("HOME", &[".local", "bin", "config", "cli-templates.toml"])
-    {
-        out.push(p);
+    for sub in TEMPLATE_SUBDIRS {
+        if let Some(p) = candidate_from_env("HOME", &[".local", "bin", sub, "cli-templates.toml"]) {
+            out.push(p);
+        }
     }
-    out.push(std::path::PathBuf::from(
-        "/opt/wenget/apps/agd/config/cli-templates.toml",
-    ));
-    out.push(std::path::PathBuf::from(
-        "/usr/local/bin/config/cli-templates.toml",
-    ));
+    for sub in TEMPLATE_SUBDIRS {
+        out.push(std::path::PathBuf::from(format!(
+            "/opt/wenget/apps/agd/{sub}/cli-templates.toml"
+        )));
+    }
+    for sub in TEMPLATE_SUBDIRS {
+        out.push(std::path::PathBuf::from(format!(
+            "/usr/local/bin/{sub}/cli-templates.toml"
+        )));
+    }
     out
 }
 
@@ -108,20 +128,24 @@ fn resolve_templates_path() -> anyhow::Result<std::path::PathBuf> {
 
     if let Ok(exe) = env::current_exe() {
         if let Some(exe_dir) = exe.parent() {
-            let p = exe_dir.join("config/cli-templates.toml");
-            if p.exists() {
-                return Ok(p);
+            for sub in TEMPLATE_SUBDIRS {
+                let p = exe_dir.join(sub).join("cli-templates.toml");
+                if p.exists() {
+                    return Ok(p);
+                }
+                checked.push(p);
             }
-            checked.push(p);
         }
     }
 
-    let dev_path =
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config/cli-templates.toml");
-    if dev_path.exists() {
-        return Ok(dev_path);
+    let manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    for sub in TEMPLATE_SUBDIRS {
+        let dev_path = manifest.join(sub).join("cli-templates.toml");
+        if dev_path.exists() {
+            return Ok(dev_path);
+        }
+        checked.push(dev_path);
     }
-    checked.push(dev_path);
 
     let platform = platform_fallback_candidates();
     if let Some(hit) = find_first_existing(&platform) {

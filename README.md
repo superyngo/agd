@@ -102,7 +102,7 @@ id = "primary"
     path = "~/.zshrc.d/zclaude.env"
 ```
 
-Each agent's `cli` field must match a top-level table key in `config/cli-templates.toml` (shipped with the binary). `[[tiers.agents.env]]` entries support three types: `source` (shell-source a file before launching), `file` (read file contents into an env var), and `env` (copy from a parent env var).
+Each agent's `cli` field must match a top-level table key in `Resources/cli-templates.toml` (shipped with the binary; older installs using `config/cli-templates.toml` are still detected). `[[tiers.agents.env]]` entries support three types: `source` (shell-source a file before launching), `file` (read file contents into an env var), and `env` (copy from a parent env var).
 
 ### Common commands
 
